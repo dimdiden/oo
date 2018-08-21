@@ -38,75 +38,32 @@ func NewClient(secret, api, root string, delta int) (*Client, error) {
 	return client, nil
 }
 
-// Get performs basic Get request to Ooayla APIs.
-func (c Client) Do(method, path string) (*http.Response, error) {
-	u, err := url.Parse(path)
-	if err != nil {
-		return nil, err
-	}
-
-	u = c.Url.ResolveReference(u)
-
-	// fmt.Println(u.Host, u.Scheme)
-
-	req, err := http.NewRequest(method, u.String(), nil) // <= stringer!!!!
-	if err != nil {
-		return nil, err
-	}
-
-	// req, err := c.NewRequest(method, path, nil) // <= stringer!!!!
-	// if err != nil {
-	//   return nil, err
-	// }
-
-	client := &http.Client{}
-	res, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
-}
-
 func (c Client) NewRequest(method, path string, body io.Reader) (*http.Request, error) {
-	u, err := url.Parse(path)
-	if err != nil {
-		return nil, err
-	}
-	// fmt.Println("PATH: ", u.Path)
-	q := u.Query()
-	q.Set("api_key", c.Api)
-	q.Set("expires", c.Expires())
 
-	u.RawQuery = q.Encode()
-	sig, err := c.Sign(method, u, body)
-	if err != nil {
-		return nil, err
-	}
-	q.Set("signature", sig)
+	var buf bytes.Buffer
+	buf.ReadFrom(body)
 
-	u.RawQuery = q.Encode()
+	u, err := c.Sign(method, path, buf.String())
 	u = c.Url.ResolveReference(u)
 
-	req, err := http.NewRequest(method, u.String(), body) // <= stringer!!!!
+	req, err := http.NewRequest(method, u.String(), &buf)
 	if err != nil {
 		return nil, err
 	}
 	return req, nil
 }
 
-func (c Client) Expires() string {
-	// Get the expires value by adding c.Delta to the current time
-	timestamp := time.Now().Add(time.Hour * time.Duration(c.Delta)).Unix()
-	expires := strconv.FormatInt(timestamp, 10)
-	return expires
-}
-
-func (c Client) Sign(method string, u *url.URL, body io.Reader) (string, error) {
+func (c Client) Sign(method, path string, body string) (*url.URL, error) {
+	u, err := url.Parse(path)
+	if err != nil {
+		return nil, err
+	}
 	// Perform initial string concantination
 	sig := c.Secret + strings.ToUpper(method) + u.Path
 	// Get the query parameters
 	q := u.Query()
+	q.Set("api_key", c.Api)
+	q.Set("expires", c.Expires())
 	// Sort url parameters by keys alphabetically and contaninate them like a=1b=2c=3
 	var keys []string
 	for k := range q {
@@ -116,15 +73,21 @@ func (c Client) Sign(method string, u *url.URL, body io.Reader) (string, error) 
 	for _, k := range keys {
 		sig += k + "=" + q[k][0] // might be issue with [0]
 	}
-	// Convert body to strings
-	if body != nil {
-		var buf bytes.Buffer
-		buf.ReadFrom(body)
-		sig += buf.String()
-	}
+
+	sig += body
+
 	// Adding body, generate a SHA-256 digest in base64 and truncate the string to 43 characters
-	// sig += buf.String()
 	sum := sha256.Sum256([]byte(sig))
 	sig = string(base64.StdEncoding.EncodeToString(sum[:]))[:43]
-	return sig, nil
+	q.Set("signature", sig)
+	u.RawQuery = q.Encode()
+
+	return u, nil
+}
+
+func (c Client) Expires() string {
+	// Get the expires value by adding c.Delta to the current time
+	timestamp := time.Now().Add(time.Hour * time.Duration(c.Delta)).Unix()
+	expires := strconv.FormatInt(timestamp, 10)
+	return expires
 }
