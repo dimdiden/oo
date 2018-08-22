@@ -44,7 +44,9 @@ func NewApi(skey, akey, root string, delta int) (*Api, error) {
 func (c Api) NewRequest(method, path string, body io.Reader) (*http.Request, error) {
 	// Convert body to bytes.Buffer for passing it as string to Sign
 	var buf bytes.Buffer
-	buf.ReadFrom(body)
+	if body != nil {
+		buf.ReadFrom(body)
+	}
 	// Get the signed url.URL
 	u, err := c.Sign(method, path, buf.String())
 	// Make full url with subpath and query
@@ -67,10 +69,14 @@ func (c Api) Sign(method, path string, body string) (*url.URL, error) {
 	}
 	// Perform initial string concantination
 	sig := c.Skey + strings.ToUpper(method) + u.Path
-	// Get the query parameters and add api and expires there
+	// Get the query parameters and add api and expires there if they are absent
 	q := u.Query()
-	q.Set("api_key", c.Akey)
-	q.Set("expires", c.expires())
+	if _, ok := q["api_key"]; !ok {
+		q.Set("api_key", c.Akey)
+	}
+	if _, ok := q["expires"]; !ok {
+		q.Set("expires", c.expires())
+	}
 	// Sort url parameters by keys alphabetically and contaninate them like a=1b=2c=3
 	var keys []string
 	for k := range q {
