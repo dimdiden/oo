@@ -60,7 +60,7 @@ func (c Api) NewRequest(method, path string, body io.Reader) (*http.Request, err
 }
 
 // Sign gets a raw url query, adds api_key and expires values,
-// generate and adds signatture for the query an returns url.URL adding the new values
+// generate and adds signatture for the query an returns url.URL contained the new values
 func (c Api) Sign(method, path string, body string) (*url.URL, error) {
 	// Convert string path to url.URL value
 	u, err := url.Parse(path)
