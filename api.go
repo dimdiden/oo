@@ -28,6 +28,13 @@ type Api struct {
 	Delta int
 }
 
+type Apier interface {
+	Get(path string) (*http.Response, error)
+	Post(path string, body io.Reader) (*http.Response, error)
+	Patch(path string, body io.Reader) (*http.Response, error)
+	Delete(path string) (*http.Response, error)
+}
+
 // NewApi returns the pointer to the new instance of the Api object
 func NewApi(skey, akey, root string, delta int) (*Api, error) {
 	api := &Api{Skey: skey, Akey: akey, Delta: delta}
@@ -39,18 +46,68 @@ func NewApi(skey, akey, root string, delta int) (*Api, error) {
 	return api, nil
 }
 
+// Get makes basic Get request to Ooayla APIs and returns http.Response
+func (a Api) Get(path string) (*http.Response, error) {
+	res, err := a.sendRequest("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// Post makes basic Post request to Ooayla APIs and returns http.Response
+func (a Api) Post(path string, body io.Reader) (*http.Response, error) {
+	res, err := a.sendRequest("POST", path, body)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// Patch makes basic Patch request to Ooayla APIs and returns http.Response
+func (a Api) Patch(path string, body io.Reader) (*http.Response, error) {
+	res, err := a.sendRequest("PATCH", path, body)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// Delete makes basic Delete request to Ooayla APIs and returns http.Response
+func (a Api) Delete(path string) (*http.Response, error) {
+	res, err := a.sendRequest("DELETE", path, nil)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func (a Api) sendRequest(method, path string, body io.Reader) (*http.Response, error) {
+	req, err := a.NewRequest(method, path, body)
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
 // NewRequest takes http method in lower or upper case, url query with parameters, and
 // body as any Reader and returns *http.Request ready for sending by the http client
-func (c Api) NewRequest(method, path string, body io.Reader) (*http.Request, error) {
+func (a Api) NewRequest(method, path string, body io.Reader) (*http.Request, error) {
 	// Convert body to bytes.Buffer for passing it as string to Sign
 	var buf bytes.Buffer
 	if body != nil {
 		buf.ReadFrom(body)
 	}
 	// Get the signed url.URL
-	u, err := c.Sign(method, path, buf.String())
+	u, err := a.Sign(method, path, buf.String())
 	// Make full url with subpath and query
-	u = c.RootUrl.ResolveReference(u)
+	u = a.RootUrl.ResolveReference(u)
 	// Make a simple request
 	req, err := http.NewRequest(method, u.String(), &buf)
 	if err != nil {
@@ -61,21 +118,21 @@ func (c Api) NewRequest(method, path string, body io.Reader) (*http.Request, err
 
 // Sign gets a raw url query, adds api_key and expires values,
 // generate and adds signatture for the query an returns url.URL contained the new values
-func (c Api) Sign(method, path string, body string) (*url.URL, error) {
+func (a Api) Sign(method, path string, body string) (*url.URL, error) {
 	// Convert string path to url.URL value
 	u, err := url.Parse(path)
 	if err != nil {
 		return nil, err
 	}
 	// Perform initial string concantination
-	sig := c.Skey + strings.ToUpper(method) + u.Path
+	sig := a.Skey + strings.ToUpper(method) + u.Path
 	// Get the query parameters and add api and expires there if they are absent
 	q := u.Query()
 	if _, ok := q["api_key"]; !ok {
-		q.Set("api_key", c.Akey)
+		q.Set("api_key", a.Akey)
 	}
 	if _, ok := q["expires"]; !ok {
-		q.Set("expires", c.expires())
+		q.Set("expires", a.expires())
 	}
 	// Sort url parameters by keys alphabetically and contaninate them like a=1b=2c=3
 	var keys []string
@@ -98,9 +155,9 @@ func (c Api) Sign(method, path string, body string) (*url.URL, error) {
 }
 
 // Expires genrates expires value based on Delta value
-func (c Api) expires() string {
+func (a Api) expires() string {
 	// Generate the expires value by adding c.Delta to the current time
-	timestamp := time.Now().Add(time.Hour * time.Duration(c.Delta)).Unix()
+	timestamp := time.Now().Add(time.Hour * time.Duration(a.Delta)).Unix()
 	expires := strconv.FormatInt(timestamp, 10)
 	return expires
 }
