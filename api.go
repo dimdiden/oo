@@ -64,6 +64,15 @@ func (a Api) Post(path string, body io.Reader) (*http.Response, error) {
 	return res, nil
 }
 
+// Put makes basic Put request to Ooayla APIs and returns http.Response
+func (a Api) Put(path string, body io.Reader) (*http.Response, error) {
+	res, err := a.sendRequest("PUT", path, body)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
 // Patch makes basic Patch request to Ooayla APIs and returns http.Response
 func (a Api) Patch(path string, body io.Reader) (*http.Response, error) {
 	res, err := a.sendRequest("PATCH", path, body)
