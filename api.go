@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -26,11 +27,14 @@ type Api struct {
 	// Delta is the number of hours the request should stay valid
 	// Required further to generate expires value for a request
 	Delta int
+	// out is used for logging requests
+	out io.Writer
 }
 
 type Apier interface {
 	Get(path string) (*http.Response, error)
 	Post(path string, body io.Reader) (*http.Response, error)
+	Put(path string, body io.Reader) (*http.Response, error)
 	Patch(path string, body io.Reader) (*http.Response, error)
 	Delete(path string) (*http.Response, error)
 }
@@ -43,6 +47,8 @@ func NewApi(skey, akey, root string, delta int) (*Api, error) {
 		return nil, err
 	}
 	api.RootUrl = u
+
+	api.out = os.Stdout
 	return api, nil
 }
 
@@ -122,6 +128,7 @@ func (a Api) NewRequest(method, path string, body io.Reader) (*http.Request, err
 	if err != nil {
 		return nil, err
 	}
+	a.out.Write([]byte("REQUEST: " + req.URL.String() + "\n"))
 	return req, nil
 }
 
