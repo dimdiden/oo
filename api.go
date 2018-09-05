@@ -5,9 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -48,8 +48,12 @@ func NewApi(skey, akey, root string, delta int) (*Api, error) {
 	}
 	api.RootUrl = u
 
-	api.out = os.Stdout
+	api.out = ioutil.Discard
 	return api, nil
+}
+
+func (a *Api) SetLogOut(out io.Writer) {
+	a.out = out
 }
 
 // Get makes basic Get request to Ooayla APIs and returns http.Response
@@ -128,7 +132,7 @@ func (a Api) NewRequest(method, path string, body io.Reader) (*http.Request, err
 	if err != nil {
 		return nil, err
 	}
-	a.out.Write([]byte("REQUEST: " + req.URL.String() + "\n"))
+	a.out.Write([]byte("REQUEST: " + req.Method + " " + req.URL.String() + "\n"))
 	return req, nil
 }
 
