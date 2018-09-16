@@ -125,6 +125,9 @@ func (a Api) NewRequest(method, path string, body io.Reader) (*http.Request, err
 	}
 	// Get the signed url.URL
 	u, err := a.Sign(method, path, buf.String())
+	if err != nil {
+		return nil, err
+	}
 	// Make full url with subpath and query
 	u = a.RootUrl.ResolveReference(u)
 	// Make a simple request
