@@ -24,7 +24,7 @@ const BacklotCDNEndpoint = "https://cdn-api.ooyala.com"
 // LiveEndpoint is the default endoint for the requests to Live API
 const LiveEndpoint = "https://live.ooyala.com"
 
-// RightsLockerEndpoint is the default endoint for the requests to Live API
+// RightsLockerEndpoint is the default endoint for the requests to Rights Locker API
 const RightsLockerEndpoint = "https://rl.ooyala.com"
 
 // Client holds secret key, api key, basic url path and expire window in hours
