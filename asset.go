@@ -20,6 +20,8 @@ type Asset struct {
 	EmbedCode        string           `json:"embed_code"`
 	AssetType        string           `json:"asset_type"`
 	TimeRestrictions TimeRestrictions `json:"time_restrictions"`
+	CreatedAt        string           `json:"created_at"`
+	UpdatedAt        string           `json:"updated_at"`
 	chunkSize        int
 	uploadMap        map[string][]byte
 }
