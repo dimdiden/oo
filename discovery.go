@@ -13,20 +13,35 @@ import (
 	"strings"
 )
 
+// Similars represents a set of assets returned from Ooyala
+// as a recommendation to the specific asset
 type Similars struct {
 	Assets []Similar `json:"results"`
 }
 
+// Len, Swap, Less are needed to satisfy Sort interface
+// Sort alphabetically
+func (s Similars) Len() int {
+	return len(s.Assets)
+}
+func (s Similars) Swap(i, j int) {
+	s.Assets[i], s.Assets[j] = s.Assets[j], s.Assets[i]
+}
+func (s Similars) Less(i, j int) bool {
+	return strings.ToLower(s.Assets[i].EmbedCode) < strings.ToLower(s.Assets[j].EmbedCode)
+}
+
+// Similar is a single recommendation for a particular asset
 type Similar struct {
 	Asset
 	Reason     string `json:"reason"`
 	BucketInfo string `json:"bucket_info"`
 }
 
-func GetNewSimilars(apier Apier, embedCode string, values url.Values) (*Similars, error) {
+// GetNewSimilars fetches list of the recommendations for the given embedCode.
+func GetNewSimilars(ci ClientInterface, embedCode string, values url.Values) (*Similars, error) {
 	query := fmt.Sprintf("/v2/discover/similar/assets/%v?%v", embedCode, values.Encode())
-	fmt.Println(query)
-	response, err := apier.Get(query)
+	response, err := ci.Get(query)
 	if err != nil {
 		return nil, err
 	}
@@ -44,8 +59,8 @@ func GetNewSimilars(apier Apier, embedCode string, values url.Values) (*Similars
 	return &similars, nil
 }
 
+// Deflate decodes BucketInfo from the response
 func (s Similar) Deflate() (string, error) {
-
 	d := struct {
 		Encoded string `json:"encoded"`
 	}{}
