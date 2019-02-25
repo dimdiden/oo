@@ -36,7 +36,7 @@ type Client struct {
 	Akey string
 	// RootUrl is the root url for making requests:
 	// For example https://api.ooyala.com for Backlot REST api
-	RootUrl *url.URL
+	RootURL *url.URL
 	// Delta is the number of hours the request should stay valid
 	// Required further to generate expires value for a request
 	Delta int
@@ -44,7 +44,8 @@ type Client struct {
 	out io.Writer
 }
 
-type Apier interface {
+// ClientInterface is an interface which wraps up basic API calls
+type ClientInterface interface {
 	Get(path string) (*http.Response, error)
 	Post(path string, body io.Reader) (*http.Response, error)
 	Put(path string, body io.Reader) (*http.Response, error)
@@ -62,7 +63,7 @@ func NewClient(skey, akey, root string, delta int) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	api.RootUrl = u
+	api.RootURL = u
 
 	api.out = ioutil.Discard
 	return api, nil
@@ -140,7 +141,7 @@ func (c Client) NewRequest(method, rawurl string, body io.Reader) (*http.Request
 	}
 	SignRequest(req, c)
 
-	req.URL = c.RootUrl.ResolveReference(req.URL)
+	req.URL = c.RootURL.ResolveReference(req.URL)
 	c.out.Write([]byte("REQUEST: " + req.Method + " " + req.URL.String() + "\n"))
 	return req, nil
 }
