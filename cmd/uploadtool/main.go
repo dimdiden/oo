@@ -19,6 +19,7 @@ func main() {
 		file    string
 		ecode   string
 		name    string
+		pp      string
 		chunk   int
 		verbose bool
 	)
@@ -42,7 +43,8 @@ func main() {
 	assetCommand.StringVar(&file, "f", "", "specify path to the video file")
 	assetCommand.StringVar(&ecode, "e", "", "[optional] specify embed code for the content-replacement procedure")
 	assetCommand.StringVar(&name, "n", "", "[optional] specify the asset name")
-	assetCommand.IntVar(&chunk, "ch", chunkSizeDefault, "[optional] specify the chunk size. Default 100MB")
+	assetCommand.StringVar(&pp, "pp", "", "[optional] specify processing profile id")
+	assetCommand.IntVar(&chunk, "ch", chunkSizeDefault, "[optional] specify the chunk size in MB")
 	assetCommand.BoolVar(&verbose, "v", false, "verbose mode")
 	// Check if subcommands are provided
 	if len(os.Args) < 2 {
@@ -71,18 +73,18 @@ func main() {
 	uploader.SetFilterFunc(bars.filterFunc)
 	uploader.SetDeferFunc(bars.deferFunc)
 
-	f, err := os.Open(file)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-
 	// Image flags validation
 	if imageCommand.Parsed() {
 		if file == "" || secret == "" || api == "" || ecode == "" {
 			imageCommand.PrintDefaults()
 			os.Exit(1)
 		}
+
+		f, err := os.Open(file)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
 
 		if err := uploader.UploadImage(f, ecode); err != nil {
 			log.Fatal(err)
@@ -95,6 +97,16 @@ func main() {
 		if file == "" || secret == "" || api == "" {
 			assetCommand.PrintDefaults()
 			os.Exit(1)
+		}
+
+		f, err := os.Open(file)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+
+		if pp != "" {
+			uploader.SetPP(pp)
 		}
 
 		chunksize := chunk * 1024 * 1024
