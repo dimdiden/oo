@@ -17,6 +17,7 @@ import (
 type Uploader struct {
 	client      *Client
 	replacement bool
+	pp          string
 	wg          *sync.WaitGroup
 	requests    chan *http.Request
 	// startFunc, filterFunc, deferFunc are used to hook into a process of chunks upload
@@ -31,9 +32,15 @@ func NewUploader(client *Client) *Uploader {
 	return &Uploader{
 		client:      client,
 		replacement: false,
+		pp:          "",
 		wg:          &sync.WaitGroup{},
 		requests:    make(chan *http.Request),
 	}
+}
+
+// SetPP sets a processing profile the asset will be processed with
+func (u *Uploader) SetPP(pp string) {
+	u.pp = pp
 }
 
 // SetStartFunc sets a function which will be executed before a process of chunks upload
@@ -231,6 +238,13 @@ func (u *Uploader) uploadChunk(request *http.Request, errs chan error) {
 
 // TriggerProcessing starts the transcoding process for an asset by the given embed code
 func (u *Uploader) TriggerProcessing(embedCode string) error {
+	// changing processing profile before triggering job
+	if u.pp != "" {
+		if err := u.setProcessingProfile(embedCode); err != nil {
+			return fmt.Errorf("couldn't set processing profile: %v", err)
+		}
+	}
+	// triggering job
 	q := "/v2/assets/" + embedCode + "/upload_status"
 	if u.replacement {
 		q = "/v2/assets/" + embedCode + "/replacement/upload_status"
@@ -241,6 +255,19 @@ func (u *Uploader) TriggerProcessing(embedCode string) error {
 	}
 	defer response.Body.Close()
 
+	if err := checkServiceError(response, http.StatusOK); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (u *Uploader) setProcessingProfile(embedCode string) error {
+	q := "/v2/assets/" + embedCode + "/processing_profile"
+	body := fmt.Sprintf(`{"processing_profile_id":"%v"}`, u.pp)
+	response, err := u.client.Post(q, strings.NewReader(body))
+	if err != nil {
+		return err
+	}
 	if err := checkServiceError(response, http.StatusOK); err != nil {
 		return err
 	}
